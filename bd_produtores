@@ -1,0 +1,22 @@
+#Código inicial para bd produtores
+
+import pandas as pd
+
+# Lê o arquivo Excel
+df_usda = pd.read_excel(r"C:\Users\maria\Downloads\agritourism_2025-45121341.xlsx")
+
+# Seleciona as colunas que quero
+colunas_uteis = [
+    'listing_id',
+    'listing_name',
+    'location_address',
+    'location_x',
+    'location_y',
+    'location_desc',
+    'webscripting'
+]
+
+df_usda = df_usda[colunas_uteis]
+
+# Visualiza os dados
+print(df_usda.head())
