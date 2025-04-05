@@ -1,0 +1,1 @@
+O objetivo deste projeto é desenvolver um sistema inteligente de recomendação que conecta pequenos produtores a consumidores de uma região, proporcionando produtos mais frescos, locais e de acordo com preferências e sazonalidades
