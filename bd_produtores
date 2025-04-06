@@ -1,22 +1,73 @@
-#Código inicial para bd produtores
-
 import pandas as pd
+import psycopg2
 
 # Lê o arquivo Excel
 df_usda = pd.read_excel(r"C:\Users\maria\Downloads\agritourism_2025-45121341.xlsx")
 
-# Seleciona as colunas que quero
-colunas_uteis = [
-    'listing_id',
-    'listing_name',
-    'location_address',
-    'location_x',
-    'location_y',
-    'location_desc',
-    'webscripting'
-]
+# Corrige as colunas numéricas (converte para float e substitui valores vazios por None)
+df_usda['location_x'] = pd.to_numeric(df_usda['location_x'], errors='coerce')
+df_usda['location_y'] = pd.to_numeric(df_usda['location_y'], errors='coerce')
 
-df_usda = df_usda[colunas_uteis]
+# Corrige as colunas de texto (substitui NaN por string vazia)
+for col in ['listing_name', 'location_address', 'location_desc', 'webscripting']:
+    df_usda[col] = df_usda[col].fillna('')
 
-# Visualiza os dados
-print(df_usda.head())
+# Converte NaN para None (para PostgreSQL aceitar)
+df_usda = df_usda.where(pd.notnull(df_usda), None)
+
+# Conecta ao banco PostgreSQL
+conexao = psycopg2.connect(
+    host="localhost",
+    database="IIA_produtores", 
+    user= "postgres", 
+    password="24052004"  
+)
+
+# Cria um cursor para execução dos comandos SQL
+cursor = conexao.cursor()
+
+# Cria a tabela no banco de dados (se ainda não existir)
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usda_produtores (
+        listing_id INTEGER PRIMARY KEY,
+        listing_name TEXT,
+        location_address TEXT,
+        location_x DOUBLE PRECISION,
+        location_y DOUBLE PRECISION,
+        location_desc TEXT,
+        webscripting TEXT
+    );
+""")
+conexao.commit()
+
+# Insere os dados na tabela do PostgreSQL
+for _, row in df_usda.iterrows():
+    cursor.execute("""
+        INSERT INTO usda_produtores (listing_id, listing_name, location_address, location_x, location_y, location_desc, webscripting)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (listing_id) 
+        DO UPDATE SET 
+            listing_name = EXCLUDED.listing_name,
+            location_address = EXCLUDED.location_address,
+            location_x = EXCLUDED.location_x,
+            location_y = EXCLUDED.location_y,
+            location_desc = EXCLUDED.location_desc,
+            webscripting = EXCLUDED.webscripting;
+    """, (
+        row['listing_id'], 
+        row['listing_name'], 
+        row['location_address'], 
+        row['location_x'], 
+        row['location_y'], 
+        row['location_desc'], 
+        row['webscripting']
+    ))
+
+# Commit as alterações
+conexao.commit()
+
+# Fecha a conexão com o banco de dados
+cursor.close()
+conexao.close()
+
+print("Dados inseridos com sucesso!")
